@@ -1,2 +1,2 @@
-# perpetuum
+# Perpetuum
 Perpetual Spiking Neural Networks
