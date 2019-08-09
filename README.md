@@ -1,2 +1,2 @@
 # Perpetuum
-Perpetual Spiking Neural Networks
+Spiking Neural Automata
