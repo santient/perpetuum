@@ -14,9 +14,9 @@ class SNA():
         self.device = torch.device(device)
         self.potentials = torch.zeros(self.total_neurons, device=self.device)
         self.weights = torch.zeros(self.hidden_neurons + self.output_neurons, self.input_neurons + self.hidden_neurons, device=self.device)
-        self.mask = torch.zeros_like(self.weights, dtype=torch.uint8)
-        self.mask[-self.output_neurons:, :self.input_neurons] = 1
-        self.mask[:self.hidden_neurons, -self.hidden_neurons:] = torch.eye(self.hidden_neurons, self.hidden_neurons, dtype=torch.uint8, device=self.device)
+        self.mask = torch.zeros_like(self.weights, dtype=torch.bool)
+        self.mask[-self.output_neurons:, :self.input_neurons] = False
+        self.mask[:self.hidden_neurons, -self.hidden_neurons:] = torch.eye(self.hidden_neurons, self.hidden_neurons, dtype=torch.bool, device=self.device)
         self.inputs = Queue()
         self.outputs = Queue(max_outputs)
         self.running = False
