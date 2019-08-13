@@ -5,20 +5,22 @@ import torch
 
 
 class SNA():
-    def __init__(self, input_neurons, hidden_neurons, output_neurons, limit=0, device="cpu"):
+    def __init__(self, input_neurons, hidden_neurons, output_neurons, learn=True, input_limit=0, output_limit=0, device="cpu"):
         self.input_neurons = input_neurons
         self.hidden_neurons = hidden_neurons
         self.output_neurons = output_neurons
         self.total_neurons = input_neurons + hidden_neurons + output_neurons
-        self.limit = limit
+        self.learn = learn
+        self.input_limit = input_limit
+        self.output_limit = output_limit
         self.device = torch.device(device)
         self.potentials = torch.zeros(self.total_neurons, device=self.device)
         self.weights = torch.zeros(self.hidden_neurons + self.output_neurons, self.input_neurons + self.hidden_neurons, device=self.device)
         self.mask = torch.zeros_like(self.weights, dtype=torch.bool)
         self.mask[-self.output_neurons:, :self.input_neurons] = False
         self.mask[:self.hidden_neurons, -self.hidden_neurons:] = torch.eye(self.hidden_neurons, self.hidden_neurons, dtype=torch.bool, device=self.device)
-        self.inputs = Queue()
-        self.outputs = Queue(limit)
+        self.inputs = Queue(self.input_limit)
+        self.outputs = Queue(self.output_limit)
         self.running = False
         self.thread = None
         self.timestep = 0
@@ -48,6 +50,8 @@ class SNA():
             self.timestep = 0
     
     def input(self, inputs):
+        if self.inputs.full():
+            self.inputs.get()
         self.inputs.put(inputs)
 
     def output(self):
@@ -56,7 +60,10 @@ class SNA():
             out = self.outputs.get()
         return self.timestep, out
 
-    def run(self):
+    def reward(self, reward):
+        pass
+
+    def __run(self):
         while self.running:
             inputs = None
             if not self.inputs.empty():
@@ -70,7 +77,7 @@ class SNA():
 
     def start(self):
         self.running = True
-        self.thread = Thread(target=self.run)
+        self.thread = Thread(target=self.__run)
         self.thread.start()
 
     def stop(self):
