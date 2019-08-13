@@ -5,12 +5,12 @@ import torch
 
 
 class SNA():
-    def __init__(self, input_neurons, hidden_neurons, output_neurons, max_outputs=0, device="cpu"):
+    def __init__(self, input_neurons, hidden_neurons, output_neurons, limit=0, device="cpu"):
         self.input_neurons = input_neurons
         self.hidden_neurons = hidden_neurons
         self.output_neurons = output_neurons
         self.total_neurons = input_neurons + hidden_neurons + output_neurons
-        self.max_outputs = max_outputs
+        self.limit = limit
         self.device = torch.device(device)
         self.potentials = torch.zeros(self.total_neurons, device=self.device)
         self.weights = torch.zeros(self.hidden_neurons + self.output_neurons, self.input_neurons + self.hidden_neurons, device=self.device)
@@ -18,13 +18,13 @@ class SNA():
         self.mask[-self.output_neurons:, :self.input_neurons] = False
         self.mask[:self.hidden_neurons, -self.hidden_neurons:] = torch.eye(self.hidden_neurons, self.hidden_neurons, dtype=torch.bool, device=self.device)
         self.inputs = Queue()
-        self.outputs = Queue(max_outputs)
+        self.outputs = Queue(limit)
         self.running = False
         self.thread = None
         self.timestep = 0
 
     def initialize(self, density):
-        self.weights = torch.empty_like(self.weights).uniform_(-1, 1)
+        self.weights.uniform_(-1, 1)
         self.weights[torch.empty_like(self.weights).uniform_(0, 1) > density] = 0
         self.weights[self.mask] = 0
 
