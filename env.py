@@ -23,32 +23,26 @@ class Env(ABC):
         pass
 
     def __run(self):
+        action = None
         while self.running:
-            actions = []
-            while True:
-                time, action = self.model.output()
-                if action is not None:
-                    actions.append((time, action))
-                else:
-                    break
-            observation, reward = self.step(actions)
-            self.model.input(observation)
+            observation, reward = self.step(action)
+            action = self.model.step(observation)
             if reward is not None:
                 self.model.reward(reward)
             self.timestep += 1
 
     def start(self, model, visualize=False):
-        self.running = True
-        self.model = model
-        self.thread = Thread(target=self.__run)
-        self.thread.start()
-        self.model.start()
-        if visualize:
-            self.visualize()
+        if not self.running:
+            self.running = True
+            self.model = model
+            self.thread = Thread(target=self.__run)
+            self.thread.start()
+            if visualize:
+                self.visualize()
 
     def stop(self):
-        self.running = False
-        self.model.stop()
-        self.thread.join()
-        self.thread = None
-        self.model = None
+        if self.running:
+            self.running = False
+            self.thread.join()
+            self.thread = None
+            self.model = None
