@@ -3,7 +3,7 @@ from threading import Thread
 
 import torch
 
-import SNA
+from sna import SNA
 
 
 class AsynchronousSNA(SNA):

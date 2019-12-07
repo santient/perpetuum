@@ -1,6 +1,6 @@
 import torch
 
-import SNA
+from sna import SNA
 
 
 class LearningSNA(SNA):
@@ -11,8 +11,8 @@ class LearningSNA(SNA):
         self.discount = discount
         self.decay = decay
         self.history_limit = history_limit
-        self.stdp_weights = torch.tensor([1 / x if x != 0 else 0 for x in range(-self.history_limit // 2, self.history_limit - self.history_limit // 2)], device=self.device)
-        self.discount_weights = torch.tensor([self.discount ** x for x in range(self.history_limit)], device=self.device)
+        self.stdp_weights = torch.tensor([1 / x if x != 0 else 0 for x in range(-(self.history_limit // 2), self.history_limit - self.history_limit // 2)], device=self.device).unsqueeze(1)
+        # self.discount_weights = torch.tensor([self.discount ** x for x in range(self.history_limit)], device=self.device)
         self.bias = torch.zeros_like(self.potentials)
         self.history = torch.zeros(self.history_limit, self.total_neurons, dtype=torch.bool, device=self.device)
 
@@ -24,11 +24,12 @@ class LearningSNA(SNA):
     def stdp(self):
         if self.learn:
             sign = self.weights.sign()
-            spike = self.history[self.history_limit / 2]
-            delta = self.lr * torch.sum(self.stdp_weights * self.history.float(), dim=0)
+            spike = self.history[self.history_limit // 2]
+            delta = self.lr * torch.sum(self.stdp_weights * self.history, dim=0).unsqueeze(1)
             delta[spike] = 0
-            self.weights[spike[self.input_neurons:]] += delta
-            self.weights[self.mask or self.weights.sign() != sign] = 0
+            self.weights[:, spike[:-self.output_neurons]] += delta[self.input_neurons:]
+            self.weights[self.mask | (self.weights.sign() != sign)] = 0
+            self.weights.clamp_(-1, 1)
 
     def prune(self, threshold):
         self.weights[self.weights.abs() < threshold] = 0
@@ -45,16 +46,24 @@ class LearningSNA(SNA):
         delta = torch.sum(self.weights[:, spike[:-self.output_neurons]], dim=1)
         self.potentials[self.input_neurons:] += delta
         self.potentials[spike] = 0
-        torch.nn.functional.relu(self.potentials, inplace=True)
+        self.potentials[self.potentials < 0] = 0
         outputs = spike[-self.output_neurons:]
         return outputs
 
-    def reward(self, reward):
+    def reward(self, r):
         if self.learn:
-            delta = torch.zeros_like(self.potentials)
-            for spike in self.history:
-                pass
-                # TODO implement
+            # TODO parallelize
+            for i, out_spike in enumerate(self.history):
+                delta = torch.zeros_like(self.potentials)
+                delta[-self.output_neurons:] = out_spike[-self.output_neurons:] * r
+                for in_spike in self.history[i + 1:]:
+                    delta[:-self.output_neurons] = self.weights.T @ delta[self.input_neurons:]
+                    delta *= in_spike
+                    delta[:self.input_neurons] = 0
+                    delta[-self.output_neurons:] = 0
+                    self.bias += delta
+                    delta *= self.discount
+                r *= self.discount
 
     def enable_learning(self):
         self.learn = True

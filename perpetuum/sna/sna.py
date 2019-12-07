@@ -26,7 +26,7 @@ class SNA:
         delta = torch.sum(self.weights[:, fire[:-self.output_neurons]], dim=1)
         self.potentials[self.input_neurons:] += delta
         self.potentials[fire] = 0
-        torch.nn.functional.relu(self.potentials, inplace=True)
+        self.potentials[self.potentials < 0] = 0
         outputs = fire[-self.output_neurons:]
         return outputs
 
