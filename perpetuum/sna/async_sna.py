@@ -3,12 +3,12 @@ from threading import Thread
 
 import torch
 
-from sna import SNA
+from sna.sna import SNA
 
 
 class AsynchronousSNA(SNA):
-    def __init__(self, input_neurons, hidden_neurons, output_neurons, input_limit=0, output_limit=0, device="cpu"):
-        super().__init__(input_neurons, hidden_neurons, output_neurons, device)
+    def __init__(self, input_neurons, hidden_neurons, output_neurons, potential_decay=0.95, device=None, input_limit=0, output_limit=0):
+        super().__init__(input_neurons, hidden_neurons, output_neurons, potential_decay, device)
         self.inputs = Queue(self.input_limit)
         self.outputs = Queue(self.output_limit)
         self.running = False

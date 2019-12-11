@@ -2,12 +2,16 @@ import torch
 
 
 class SNA:
-    def __init__(self, input_neurons, hidden_neurons, output_neurons, device="cpu"):
+    def __init__(self, input_neurons, hidden_neurons, output_neurons, potential_decay=0.95, device=None):
         self.input_neurons = input_neurons
         self.hidden_neurons = hidden_neurons
         self.output_neurons = output_neurons
         self.total_neurons = input_neurons + hidden_neurons + output_neurons
-        self.device = torch.device(device)
+        self.potential_decay = potential_decay
+        if device is None:
+            self.device = torch.device("cpu")
+        else:
+            self.device = device
         self.potentials = torch.zeros(self.total_neurons, device=self.device)
         self.weights = torch.zeros(self.hidden_neurons + self.output_neurons, self.input_neurons + self.hidden_neurons, device=self.device)
         self.mask = torch.zeros_like(self.weights, dtype=torch.bool)
@@ -24,6 +28,7 @@ class SNA:
             self.potentials[:self.input_neurons] += inputs
         fire = self.potentials >= 1
         delta = torch.sum(self.weights[:, fire[:-self.output_neurons]], dim=1)
+        self.potentials *= self.potential_decay
         self.potentials[self.input_neurons:] += delta
         self.potentials[fire] = 0
         self.potentials[self.potentials < 0] = 0
