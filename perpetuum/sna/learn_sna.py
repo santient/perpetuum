@@ -1,6 +1,6 @@
 import torch
 
-from sna.sna import SNA
+from perpetuum.sna import SNA
 
 
 class LearningSNA(SNA):

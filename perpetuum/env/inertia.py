@@ -1,7 +1,7 @@
 import numpy
 import torch
 
-from env.env import Env
+from perpetuum.env import Env
 
 
 class Inertia(Env):
