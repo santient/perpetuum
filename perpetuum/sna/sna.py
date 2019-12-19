@@ -2,7 +2,7 @@ import torch
 
 
 class SNA:
-    def __init__(self, input_neurons, hidden_neurons, output_neurons, potential_decay=0.95, device=None):
+    def __init__(self, input_neurons, hidden_neurons, output_neurons, potential_decay=0.99, device=None):
         self.input_neurons = input_neurons
         self.hidden_neurons = hidden_neurons
         self.output_neurons = output_neurons

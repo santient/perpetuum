@@ -4,7 +4,7 @@ from sna.sna import SNA
 
 
 class LearningSNA(SNA):
-    def __init__(self, input_neurons, hidden_neurons, output_neurons, potential_decay=0.95, device=None, learn=True, lr=1e-2, reward_discount=0.95, bias_decay=0.95, history_limit=101):
+    def __init__(self, input_neurons, hidden_neurons, output_neurons, potential_decay=0.99, device=None, learn=True, lr=1e-2, reward_discount=0.99, bias_decay=0.99, history_limit=101):
         super().__init__(input_neurons, hidden_neurons, output_neurons, potential_decay, device)
         self.learn = learn
         self.lr = lr
