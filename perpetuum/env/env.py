@@ -2,47 +2,49 @@ from abc import ABC, abstractmethod
 from threading import Thread
 
 
-class Env(ABC):
+class Env:
     def __init__(self):
-        self.model = None
-        self.running = False
-        self.thread = None
+        # self.model = None
+        # self.running = False
+        # self.thread = None
         self.timestep = 0
-        super().__init__()
+        # super().__init__()
 
-    @abstractmethod
+    # @abstractmethod
     def step(self, actions):
-        pass
+        observation = None
+        reward = None
+        return observation, reward
 
-    @abstractmethod
+    # @abstractmethod
     def reset(self):
-        pass
+        self.timestep = 0
 
-    @abstractmethod
+    # @abstractmethod
     def visualize(self):
         pass
 
-    def __run(self):
-        action = None
-        while self.running:
-            observation, reward = self.step(action)
-            action = self.model.step(observation)
-            if reward is not None:
-                self.model.reward(reward)
-            self.timestep += 1
+    # def __run(self):
+    #     action = None
+    #     while self.running:
+    #         observation, reward = self.step(action)
+    #         action = self.model.step(observation)
+    #         if reward is not None:
+    #             self.model.reward(reward)
+    #         self.timestep += 1
 
-    def start(self, model, visualize=False):
-        if not self.running:
-            self.running = True
-            self.model = model
-            self.thread = Thread(target=self.__run)
-            self.thread.start()
-            if visualize:
-                self.visualize()
+    # def start(self, model, visualize=False):
+    #     if not self.running:
+    #         self.running = True
+    #         self.model = model
+    #         self.thread = Thread(target=self.__run)
+    #         self.thread.start()
+    #         if visualize:
+    #             self.visualize()
 
-    def stop(self):
-        if self.running:
-            self.running = False
-            self.thread.join()
-            self.thread = None
-            self.model = None
+    # def stop(self):
+    #     if self.running:
+    #         self.running = False
+    #         self.thread.join()
+    #         self.thread = None
+    #         self.model = None

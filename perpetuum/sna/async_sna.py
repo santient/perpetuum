@@ -13,15 +13,15 @@ class AsynchronousSNA(SNA):
         self.outputs = Queue(self.output_limit)
         self.running = False
         self.thread = None
-        self.timestep = 0
+        # self.timestep = 0
 
     def reset(self):
         if not self.running:
             super().reset()
             self.inputs.queue.clear()
             self.outputs.queue.clear()
-            self.timestep = 0
-    
+            # self.timestep = 0
+
     def input(self, inputs):
         if self.inputs.full():
             self.inputs.get()

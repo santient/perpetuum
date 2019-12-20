@@ -31,9 +31,6 @@ class LearningSNA(SNA):
             self.weights[self.mask | (self.weights.sign() == -sign)] = 0
             self.weights.clamp_(-1, 1)
 
-    def prune(self, threshold):
-        self.weights[self.weights.abs() < threshold] = 0
-
     def step(self, inputs=None):
         if inputs is not None:
             self.potentials[:self.input_neurons] += inputs
@@ -49,6 +46,7 @@ class LearningSNA(SNA):
         self.potentials[spike] = 0
         self.potentials[self.potentials < 0] = 0
         outputs = spike[-self.output_neurons:]
+        self.timestep += 1
         return outputs
 
     def reward(self, r):

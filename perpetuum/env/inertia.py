@@ -5,7 +5,7 @@ from perpetuum.env import Env
 
 
 class Inertia(Env):
-    def __init__(self, map_height, map_width, food_density, hazard_density, speed=1e-2, episode_steps=10000, device=None):
+    def __init__(self, map_height, map_width, food_density, hazard_density, speed=1e-2, episode_steps=1000, device=None):
         super().__init__()
         self.map_height = map_height
         self.map_width = map_width
@@ -24,11 +24,17 @@ class Inertia(Env):
         self.score = 0
         self.reset()
 
-    def __random_teleport(self):
-        self.velocity[0] = 0
-        self.velocity[1] = 0
-        self.position[0] = torch.randint(self.map_height, ()).item()
-        self.position[1] = torch.randint(self.map_width, ()).item()
+    # def __random_teleport(self):
+    #     self.velocity[0] = 0
+    #     self.velocity[1] = 0
+    #     self.position[0] = torch.randint(self.map_height, ()).item()
+    #     self.position[1] = torch.randint(self.map_width, ()).item()
+
+    def __center(self):
+        self.position = numpy.zeros(2)
+        self.position[0] = self.map_height // 2
+        self.position[1] = self.map_width // 2
+        self.velocity = numpy.zeros(2)
 
     # def __count_food(self):
     #     return Counter(self.map.flatten())["+"]
@@ -44,23 +50,25 @@ class Inertia(Env):
             if action[3]:
                 self.velocity[1] -= self.speed
         self.position += self.velocity
-        if self.position[0] < 0 \
-        or self.position[0] >= self.map_height \
-        or self.position[1] < 0 \
-        or self.position[1] >= self.map_width:
-            self.__random_teleport()
-        # if self.position[0] < 0:
-        #     self.position[0] = 0
-        #     self.velocity[0] = 0
-        # elif self.position[0] >= self.map_height:
-        #     self.position[0] = self.map_height - 1
-        #     self.velocity[0] = 0
-        # if self.position[1] < 0:
-        #     self.position[1] = 0
-        #     self.velocity[1] = 0
-        # elif self.position[1] >= self.map_width:
-        #     self.position[1] = self.map_width - 1
-        #     self.velocity[1] = 0
+        reward = None
+        # if self.position[0] < 0 \
+        # or self.position[0] >= self.map_height \
+        # or self.position[1] < 0 \
+        # or self.position[1] >= self.map_width:
+        #     self.__center()
+        #     reward = -1.0
+        if self.position[0] < 0:
+            self.position[0] = 0
+            self.velocity[0] = 0
+        elif self.position[0] >= self.map_height:
+            self.position[0] = self.map_height - 1
+            self.velocity[0] = 0
+        if self.position[1] < 0:
+            self.position[1] = 0
+            self.velocity[1] = 0
+        elif self.position[1] >= self.map_width:
+            self.position[1] = self.map_width - 1
+            self.velocity[1] = 0
         pos = self.position.astype(int)
         feat = self.map[tuple(pos)]
         if feat == "+":
@@ -68,10 +76,8 @@ class Inertia(Env):
             reward = 1.0
         elif feat == "x":
             reward = -1.0
-        else:
-            reward = None
         self.map[tuple(pos)] = " "
-        observation = torch.zeros(13, dtype=torch.float32, device=self.device)
+        observation = torch.zeros(12, dtype=torch.float32, device=self.device)
         for x in range(pos[0] + 1, self.map_height + 1):
             dist = abs(x - self.position[0]) + 1
             if x == self.map_height:
@@ -112,15 +118,16 @@ class Inertia(Env):
             elif self.map[pos[0], y] == "x":
                 observation[10] = 1 / dist
                 break
-        observation[12] = 1
+        # observation[12] = 1
         if reward is not None:
             # print(reward)
             self.score += reward
+        terminal = False
         if self.timestep == self.episode_steps:
-            print("Episode score:", self.score)
-            self.reset()
+            terminal = True
+        self.timestep += 1
         # print(action, observation, reward)
-        return observation, reward
+        return observation, reward, terminal
 
     def reset(self):
         self.map = numpy.random.choice(
@@ -128,13 +135,12 @@ class Inertia(Env):
             size=(self.map_height, self.map_width),
             p=[self.food_density, self.hazard_density, 1 - self.food_density - self.hazard_density])
         # self.food_count = self.__count_food()
-        self.position = numpy.zeros(2)
-        self.velocity = numpy.zeros(2)
+        self.__center()
         self.score = 0
         self.timestep = 0
-        self.__random_teleport()
-        if self.model is not None:
-            self.model.prune(0.01)
+        # self.__random_teleport()
+        # if self.model is not None:
+        #     self.model.prune(0.01)
 
     def visualize(self):
         print(self.map)
