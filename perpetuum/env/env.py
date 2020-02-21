@@ -2,19 +2,19 @@ from abc import ABC, abstractmethod
 from threading import Thread
 
 
-class Env:
+class Env():
     def __init__(self):
         # self.model = None
         # self.running = False
         # self.thread = None
         self.timestep = 0
+        self.state = None
         # super().__init__()
 
     # @abstractmethod
-    def step(self, actions):
-        observation = None
-        reward = None
-        return observation, reward
+    def step(self, action):
+        reward = 0.0
+        return self.state, reward
 
     # @abstractmethod
     def reset(self):

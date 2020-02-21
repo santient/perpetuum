@@ -5,14 +5,14 @@ from perpetuum.env import Env
 
 
 class Inertia(Env):
-    def __init__(self, map_height, map_width, food_density, hazard_density, speed=1e-2, episode_steps=1000, device=None):
+    def __init__(self, map_height, map_width, food_density, hazard_density, speed=1e-2, device=None):
         super().__init__()
         self.map_height = map_height
         self.map_width = map_width
         self.food_density = food_density
         self.hazard_density = hazard_density
         self.speed = speed
-        self.episode_steps = episode_steps
+        # self.episode_steps = episode_steps
         if device is None:
             self.device = torch.device("cpu")
         else:
@@ -39,18 +39,23 @@ class Inertia(Env):
     # def __count_food(self):
     #     return Counter(self.map.flatten())["+"]
 
+    def replenish(self, item):
+        pos = None
+        while pos is None or self.map[pos] != " ":
+            pos = (torch.randint(self.map_height, ()).item(), torch.randint(self.map_width, ()).item())
+        self.map[pos] = item
+
     def step(self, action):
-        if action is not None:
-            if action[0]:
-                self.velocity[0] += self.speed
-            if action[1]:
-                self.velocity[0] -= self.speed
-            if action[2]:
-                self.velocity[1] += self.speed
-            if action[3]:
-                self.velocity[1] -= self.speed
+        if action[0]:
+            self.velocity[0] += self.speed
+        if action[1]:
+            self.velocity[0] -= self.speed
+        if action[2]:
+            self.velocity[1] += self.speed
+        if action[3]:
+            self.velocity[1] -= self.speed
         self.position += self.velocity
-        reward = None
+        reward = 0.0
         # if self.position[0] < 0 \
         # or self.position[0] >= self.map_height \
         # or self.position[1] < 0 \
@@ -60,24 +65,30 @@ class Inertia(Env):
         if self.position[0] < 0:
             self.position[0] = 0
             self.velocity[0] = 0
+            reward += -1
         elif self.position[0] >= self.map_height:
             self.position[0] = self.map_height - 1
             self.velocity[0] = 0
+            reward += -1
         if self.position[1] < 0:
             self.position[1] = 0
             self.velocity[1] = 0
+            reward += -1
         elif self.position[1] >= self.map_width:
             self.position[1] = self.map_width - 1
             self.velocity[1] = 0
+            reward += -1
         pos = self.position.astype(int)
         feat = self.map[tuple(pos)]
         if feat == "+":
             # self.food_count -= 1
-            reward = 1.0
+            reward += 100
+            self.replenish("+")
         elif feat == "x":
-            reward = -1.0
+            reward += -100
+            self.replenish("x")
         self.map[tuple(pos)] = " "
-        observation = torch.zeros(12, dtype=torch.float32, device=self.device)
+        observation = torch.zeros(13, dtype=torch.float32, device=self.device)
         for x in range(pos[0] + 1, self.map_height + 1):
             dist = abs(x - self.position[0]) + 1
             if x == self.map_height:
@@ -118,16 +129,15 @@ class Inertia(Env):
             elif self.map[pos[0], y] == "x":
                 observation[10] = 1 / dist
                 break
-        # observation[12] = 1
-        if reward is not None:
-            # print(reward)
-            self.score += reward
-        terminal = False
-        if self.timestep == self.episode_steps:
-            terminal = True
+        observation[12] = 1
+        # print(reward)
+        self.score += reward
+        # terminal = False
+        # if self.timestep == self.episode_steps:
+        #     terminal = True
         self.timestep += 1
         # print(action, observation, reward)
-        return observation, reward, terminal
+        return observation, reward
 
     def reset(self):
         self.map = numpy.random.choice(
@@ -138,6 +148,7 @@ class Inertia(Env):
         self.__center()
         self.score = 0
         self.timestep = 0
+        return None
         # self.__random_teleport()
         # if self.model is not None:
         #     self.model.prune(0.01)
