@@ -1,5 +1,6 @@
 from collections import deque
 import random
+import pickle
 
 import torch
 from torch import nn
@@ -114,8 +115,8 @@ class MetaDDPGAgent():
         self.sna.weights = weights
         self.sna.prune(self.prune_threshold)
         action = self.sna.step(state)
-        next_state, reward = env.step(action)
-        return weights, next_state, reward
+        next_state, reward, terminal = env.step(action)
+        return weights, next_state, reward, terminal
     
     def update(self, batch_size):
         weights, rewards = self.memory.sample(batch_size)    
@@ -137,33 +138,39 @@ class MetaDDPGAgent():
             target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
 class MetaDDPGTrainer():
-    def __init__(self, sna, env, agent_params, noise_params):
+    def __init__(self, sna, env, agent_params=None, noise_params=None):
         self.sna = sna
         self.env = env
+        if agent_params is None:
+            agent_params = {}
+        if noise_params is None:
+            noise_params = {}
+        self.agent_params = agent_params
+        self.noise_params = noise_params
         self.agent = MetaDDPGAgent(sna, **agent_params, device=sna.device)
         self.noise = OUNoise(sna.weights.shape, -1.0, 1.0, **noise_params, device=sna.device)
 
-    def train(self, steps, batch_size, report_iter):
+    def train(self, episodes, batch_size):
         print("Training model...")
         self.sna.reset()
-        state = self.env.reset()
-        self.noise.reset()
-        avg_reward = []
-        for step in range(steps):
-            weights, next_state, reward = self.agent.step(state, self.env, self.noise)
-            self.agent.memory.push(weights.cpu(), reward)
-            state = next_state
-            if len(self.agent.memory) >= batch_size:
-                self.agent.update(batch_size)
-            avg_reward.append(reward)
-            if len(avg_reward) == report_iter:
-                avg_reward = sum(avg_reward) / len(avg_reward)
-                print("Step {} average reward: {}".format(step, avg_reward))
-                avg_reward = []
+        for episode in range(episodes):
+            state = self.env.reset()
+            self.noise.reset()
+            episode_reward = 0
+            terminal = False
+            while not terminal:
+                weights, state, reward, terminal = self.agent.step(state, self.env, self.noise)
+                self.agent.memory.push(weights.cpu(), reward)
+                if len(self.agent.memory) >= batch_size:
+                    self.agent.update(batch_size)
+                episode_reward += reward
+            print("Episode {} reward: {}".format(episode, episode_reward))
         print("Training complete.")
 
-    def save(path):
-        pass
+    def save(self, path):
+        with open(path, 'wb') as f:
+            pickle.dump(self.__dict__, f, pickle.HIGHEST_PROTOCOL)
 
-    def load(path):
-        pass
+    def load(self, path):
+        with open(path, 'rb') as f:
+            self.__dict__.update(pickle.load(f))
